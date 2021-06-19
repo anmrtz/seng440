@@ -10,26 +10,30 @@
 class image {
     public:
 
-    image() = delete;
-    image(const image&) = delete;
-    image& operator=(const image&) = delete;
-
     image(const std::string& filename) {
-        if (lodepng_decode24_file(&pixels,&width,&height,filename.c_str()) != 0) {
+        if (lodepng_decode24_file(&pixel_data,&width,&height,filename.c_str()) != 0) {
             throw std::runtime_error("Failed to load PNG file " + filename);
         }
     }
 
     image(uint32_t width, uint32_t height)
     : width(width), height(height) {
-        pixels = (uint8_t*)malloc(width * height * 3);
-        if (!pixels) {
+        pixel_data = (uint8_t*)malloc(width * height * 3);
+        if (!pixel_data) {
             throw std::runtime_error("Failed to allocate memory for new image");
         }
     }
 
-    void write_image(const std::string& filename) {
-        if (lodepng_encode24_file(filename.c_str(), pixels, width, height) != 0) {
+    image() = delete;
+
+    // No copying allowed, only moving
+    image(const image&) = delete;
+    image& operator=(const image&) = delete;
+    image(image&&) = default;
+    image& operator=(image&&) = default;
+
+    void write_image(const std::string& filename) const {
+        if (lodepng_encode24_file(filename.c_str(), pixel_data, width, height) != 0) {
             throw std::runtime_error("Failed to write PNG file " + filename);
         }
     }
@@ -42,19 +46,18 @@ class image {
         return height;
     }
 
-    uint8_t* get_pixels() const {
-        return pixels;
+    uint8_t* get_pixel_data() const {
+        return pixel_data;
     }
 
     ~image() {
-        if (pixels != nullptr) {
-            free(pixels);
+        if (pixel_data != nullptr) {
+            free(pixel_data);
         }
     }
 
     private:
 
     uint32_t width, height;
-    uint8_t* pixels = nullptr;
-
+    uint8_t* pixel_data = nullptr;
 };
