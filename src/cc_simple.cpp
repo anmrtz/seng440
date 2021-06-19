@@ -1,7 +1,7 @@
 #include <iostream>
 #include <array>
 
-#include "conversion.hpp"
+#include "image.hpp"
 
 template <typename T>
 T sat(T val, T min, T max) {
@@ -21,9 +21,26 @@ T avg4(T e1, T e2, T e3, T e4) {
 void cc_naive_float() {}
 
 int main() {
-    image img1("test.png");
+    //image img1("test.png");
 
-    img1.write_image("test_out.png");
+    //img1.write_image("test_out.png");
+
+    image img2(512,256);
+
+    uint8_t* const pixels = img2.get_pixels();
+    const uint32_t width = img2.get_width();
+    const uint32_t height = img2.get_height();
+
+    for (uint32_t col = 0; col < height; ++col) {
+        for (uint32_t row = 0; row < width; ++row) {
+            const uint32_t idx = 3 * (row + (col * width));
+            pixels[idx] = 33;
+            pixels[idx + 1] = 66;
+            pixels[idx + 2] = 99;
+        }
+    }
+
+    img2.write_image("sample.png");
 
     // Convert rgb to ycc array
     // Resize image

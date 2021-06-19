@@ -20,8 +20,9 @@ class image {
         }
     }
 
-    image(uint32_t width, uint32_t height) {
-        pixels = (uint8_t*)malloc(width * height * 4);
+    image(uint32_t width, uint32_t height)
+    : width(width), height(height) {
+        pixels = (uint8_t*)malloc(width * height * 3);
         if (!pixels) {
             throw std::runtime_error("Failed to allocate memory for new image");
         }
@@ -38,7 +39,7 @@ class image {
     }
 
     uint32_t get_height() const {
-        return width;
+        return height;
     }
 
     uint8_t* get_pixels() const {
