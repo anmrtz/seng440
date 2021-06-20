@@ -26,11 +26,9 @@ class image {
 
     image() = delete;
 
-    // No copying allowed, only moving
+    // No copying allowed
     image(const image&) = delete;
     image& operator=(const image&) = delete;
-    image(image&&) = default;
-    image& operator=(image&&) = default;
 
     void write_image(const std::string& filename) const {
         if (lodepng_encode24_file(filename.c_str(), pixel_data, width, height) != 0) {
