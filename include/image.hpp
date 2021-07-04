@@ -30,6 +30,24 @@ class image {
     image(const image&) = delete;
     image& operator=(const image&) = delete;
 
+    image(image&& other) {
+        this->width = other.width;
+        this->height = other.height;
+
+        this->pixel_data = other.pixel_data;
+        other.pixel_data = nullptr;
+    }
+
+    image& operator=(image && other) {
+        this->width = other.width;
+        this->height = other.height;
+
+        this->pixel_data = other.pixel_data;
+        other.pixel_data = nullptr;
+
+        return *this;
+    }
+
     void write_image(const std::string& filename) const {
         if (lodepng_encode24_file(filename.c_str(), pixel_data, width, height) != 0) {
             throw std::runtime_error("Failed to write PNG file " + filename);

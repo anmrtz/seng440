@@ -58,10 +58,11 @@ void cc_naive(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8_
 
                 // Write YCC values to output image buffer
                 const uint32_t ycc_idx = 3*((col >> 1) + ((row >> 1) * (rgb_width >> 1)));
-                ycc_data[ycc_idx] = *r;   // Y
+                ycc_data[ycc_idx] = rgb_data[up_left_idx];   // Y
                 ycc_data[ycc_idx+1] = *g; // Cb
                 ycc_data[ycc_idx+2] = *b; // Cr
             }
+            // Process 1x2 terminal row clusters
             else if ((row == rgb_height - 1) && (col % 2 == 1)) {
                 const uint32_t left_idx = idx - 3;
 
@@ -70,10 +71,11 @@ void cc_naive(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8_
 
                 // Write YCC values to output image buffer
                 const uint32_t ycc_idx = 3*((col >> 1) + ((row >> 1) * (rgb_width >> 1)));
-                ycc_data[ycc_idx] = *r;   // Y
+                ycc_data[ycc_idx] = rgb_data[left_idx];   // Y
                 ycc_data[ycc_idx+1] = *g; // Cb
                 ycc_data[ycc_idx+2] = *b; // Cr
             }
+            // Process 2x1 terminal column clusters
             else if ((col == rgb_width - 1) && (row % 2 == 1)) {
                 const uint32_t up_idx = idx - (rgb_width*3);
 
@@ -82,7 +84,7 @@ void cc_naive(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8_
 
                 // Write YCC values to output image buffer
                 const uint32_t ycc_idx = 3*((col >> 1) + ((row >> 1) * (rgb_width >> 1)));
-                ycc_data[ycc_idx] = *r;   // Y
+                ycc_data[ycc_idx] = rgb_data[up_idx];   // Y
                 ycc_data[ycc_idx+1] = *g; // Cb
                 ycc_data[ycc_idx+2] = *b; // Cr
             }
