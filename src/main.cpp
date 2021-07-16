@@ -51,7 +51,7 @@ int main() {
     // Load starting RGB image
     image rgb_img("test.png");
 
-    perform_cc(rgb_img, VECTOR);
+    perform_cc(rgb_img, NAIVE);
 
     return 0;
 }

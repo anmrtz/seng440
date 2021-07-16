@@ -2,7 +2,7 @@
 
 #include "cc.h"
 
-static inline void sat(uint8_t* val, uint8_t max) {
+static inline void clip(int32_t* val, int32_t max) {
     if (*val < YCC_MIN_VAL)
         *val = YCC_MIN_VAL;
     else if (*val > max)
@@ -30,23 +30,23 @@ void cc_naive(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8_
 
             // Convert RGB values to YCC
             {
-                const uint8_t r_val = *r;
-                const uint8_t g_val = *g;
-                const uint8_t b_val = *b;
+                const int32_t r_val = *r;
+                const int32_t g_val = *g;
+                const int32_t b_val = *b;
 
-                const uint8_t y  =  16 + ((66*r_val + 129*g_val + 25*b_val) >> 8);
-                const uint8_t cb = 128 + ((-38*r_val - 74*g_val + 112*b_val) >> 8);
-                const uint8_t cr = 128 + ((112*r_val - 94*g_val - 18*b_val) >> 8);
+                int32_t y  =  16 + ((66*r_val + 129*g_val + 25*b_val) >> 8);
+                int32_t cb = 128 + ((-38*r_val - 74*g_val + 112*b_val) >> 8);
+                int32_t cr = 128 + ((112*r_val - 94*g_val - 18*b_val) >> 8);
+
+                // Clip values to YCbCr range
+                clip(&y, Y_MAX_VAL);
+                clip(&cb, C_MAX_VAL);
+                clip(&cr, C_MAX_VAL);
 
                 *r = y;
                 *g = cb;
                 *b = cr;
             }
-
-            // Saturate values
-            sat(r, Y_MAX_VAL);
-            sat(g, C_MAX_VAL);
-            sat(b, C_MAX_VAL);
 
             // Write luma value to output array
             ycc_data[ycc_y_idx] = *r;
