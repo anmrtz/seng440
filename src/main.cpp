@@ -41,7 +41,7 @@ void perform_cc(const image& rgb_img, CC_IMPL cc_impl) {
     }
 
 //    std::ofstream ycc_file{"ycc_result_" + std::get<0>(lookup.at(cc_impl)) + ".raw", std::ios_base::binary};
-    std::ofstream ycc_file{"ycc_result.raw", std::ios_base::binary};
+    std::ofstream ycc_file{"ycc-result.raw", std::ios_base::binary};
     ycc_file.write((char *)planar_ycc_data.data(), planar_ycc_data.size());
 
     std::cout << "Conversion complete\n";

@@ -17,12 +17,13 @@ void cc_vector(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8
     uint8x8x3_t buff;
     int16x8x3_t rgb;
     int16x8x3_t ycc;
+    int16x8_t temp;
 
     int16x4_t coeff1;
     int16x4_t coeff2;
 
     coeff1[0] = 66;
-    coeff1[1] = 129;
+    coeff1[1] = 128; // 129
     coeff1[2] = 25;
 
     coeff1[3] = -38;
@@ -46,25 +47,37 @@ void cc_vector(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8
         rgb.val[2] = vreinterpretq_s16_u16(vmovl_u8(buff.val[2]));
 
         ycc.val[0] = vmulq_lane_s16(rgb.val[0], coeff1, 0);
-        ycc.val[0] = vmlaq_lane_s16(ycc.val[0], rgb.val[1], coeff1, 1);
-        ycc.val[0] = vmlaq_lane_s16(ycc.val[0], rgb.val[2], coeff1, 2);
         ycc.val[0] = vshrq_n_s16(ycc.val[0], 8);
+        temp = vmulq_lane_s16(rgb.val[1], coeff1, 1);
+        temp = vshrq_n_s16(temp, 8);
+        ycc.val[0] = vaddq_s16(ycc.val[0], temp);
+        temp = vmulq_lane_s16(rgb.val[2], coeff1, 2);
+        temp = vshrq_n_s16(temp, 8);
+        ycc.val[0] = vaddq_s16(ycc.val[0], temp);
         ycc.val[0] = vaddq_s16(ycc.val[0], val_16);
         ycc.val[0] = vminq_s16(ycc.val[0], val_y_max);
         ycc.val[0] = vmaxq_s16(ycc.val[0], val_16);
 
         ycc.val[1] = vmulq_lane_s16(rgb.val[0], coeff1, 3);
-        ycc.val[1] = vmlaq_lane_s16(ycc.val[1], rgb.val[1], coeff2, 0);
-        ycc.val[1] = vmlaq_lane_s16(ycc.val[1], rgb.val[2], coeff2, 1);
         ycc.val[1] = vshrq_n_s16(ycc.val[1], 8);
+        temp = vmulq_lane_s16(rgb.val[1], coeff2, 0);
+        temp = vshrq_n_s16(temp, 8);
+        ycc.val[1] = vaddq_s16(ycc.val[1], temp);
+        temp = vmulq_lane_s16(rgb.val[2], coeff2, 1);
+        temp = vshrq_n_s16(temp, 8);
+        ycc.val[1] = vaddq_s16(ycc.val[1], temp);
         ycc.val[1] = vaddq_s16(ycc.val[1], val_128);
         ycc.val[1] = vminq_s16(ycc.val[1], val_c_max);
         ycc.val[1] = vmaxq_s16(ycc.val[1], val_16);
 
         ycc.val[2] = vmulq_lane_s16(rgb.val[0], coeff2, 1);
-        ycc.val[2] = vmlaq_lane_s16(ycc.val[2], rgb.val[1], coeff2, 2);
-        ycc.val[2] = vmlaq_lane_s16(ycc.val[2], rgb.val[2], coeff2, 3);
         ycc.val[2] = vshrq_n_s16(ycc.val[2], 8);
+        temp = vmulq_lane_s16(rgb.val[1], coeff2, 2);
+        temp = vshrq_n_s16(temp, 8);
+        ycc.val[2] = vaddq_s16(ycc.val[2], temp);
+        temp = vmulq_lane_s16(rgb.val[2], coeff2, 3);
+        temp = vshrq_n_s16(temp, 8);
+        ycc.val[2] = vaddq_s16(ycc.val[2], temp);
         ycc.val[2] = vaddq_s16(ycc.val[2], val_128);
         ycc.val[2] = vminq_s16(ycc.val[2], val_c_max);
         ycc.val[2] = vmaxq_s16(ycc.val[2], val_16);
