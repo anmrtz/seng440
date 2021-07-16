@@ -1,6 +1,8 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <map>
+#include <tuple>
 
 #include "../include/image.hpp"
 
@@ -11,6 +13,11 @@ extern "C" {
 enum CC_IMPL {
     NAIVE,
     VECTOR
+};
+
+static const std::map<CC_IMPL, std::tuple<std::string, int>> lookup = {
+    {NAIVE, {"naive",0}},
+    {VECTOR, {"vector",0}},
 };
 
 void perform_cc(const image& rgb_img, CC_IMPL cc_impl) {
@@ -33,6 +40,7 @@ void perform_cc(const image& rgb_img, CC_IMPL cc_impl) {
         break;
     }
 
+//    std::ofstream ycc_file{"ycc_result_" + std::get<0>(lookup.at(cc_impl)) + ".raw", std::ios_base::binary};
     std::ofstream ycc_file{"ycc_result.raw", std::ios_base::binary};
     ycc_file.write((char *)planar_ycc_data.data(), planar_ycc_data.size());
 
@@ -43,7 +51,7 @@ int main() {
     // Load starting RGB image
     image rgb_img("test.png");
 
-    perform_cc(rgb_img, NAIVE);
+    perform_cc(rgb_img, VECTOR);
 
     return 0;
 }

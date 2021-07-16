@@ -20,10 +20,12 @@ class image {
         const std::size_t data_size = width*height*3;
         const std::size_t padded_size = get_padded_size();
         if ((data_size) != padded_size) {
-            uint8_t* temp_pixel_data = (uint8_t*)malloc(padded_size);
+            uint8_t* temp_pixel_data = (uint8_t*)calloc(padded_size, 1);
             if (!temp_pixel_data) {
                 throw std::runtime_error("Failed to allocate memory for new image");
             }
+
+            std::cout << "Data/padded: " << data_size << " / " << padded_size << '\n';
 
             std::copy_n(pixel_data, data_size, temp_pixel_data);
 
@@ -91,6 +93,6 @@ class image {
 
     std::size_t get_padded_size() const {
         const std::size_t num_data_bytes = width*height*3;
-        return num_data_bytes + (16 - (num_data_bytes % 16));
+        return num_data_bytes + (24 - (num_data_bytes % 24));
     }
 };
