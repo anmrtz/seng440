@@ -13,6 +13,25 @@ static inline uint8_t avg4(uint8_t e1, uint8_t e2, uint8_t e3, uint8_t e4) {
     return (e1 + e2 + e3 + e4) >> 2;
 }
 
+#define VSTEP(covec1, coidx1, covec2, coidx2, covec3, coidx3, skewvec, resmax, outbuff) ({\
+    temp_low = vmull_lane_s16(rgb_low.val[0], covec1, coidx1);\
+    temp_high = vmull_lane_s16(rgb_high.val[0], covec1, coidx1);\
+    temp_low = vmlal_lane_s16(temp_low, rgb_low.val[1], covec2, coidx2);\
+    temp_high = vmlal_lane_s16(temp_high, rgb_high.val[1], covec2, coidx2);\
+    temp_low = vmlal_lane_s16(temp_low, rgb_low.val[2], covec3, coidx3);\
+    temp_high = vmlal_lane_s16(temp_high, rgb_high.val[2], covec3, coidx3);\
+    temp_low = vshrq_n_s32(temp_low, 8);\
+    temp_high = vshrq_n_s32(temp_high, 8);\
+    temp_low = vaddq_s32(temp_low, skewvec);\
+    temp_high = vaddq_s32(temp_high, skewvec);\
+    temp_low = vminq_s32(temp_low, resmax);\
+    temp_high = vminq_s32(temp_high, resmax);\
+    temp_low = vmaxq_s32(temp_low, val_16);\
+    temp_high = vmaxq_s32(temp_high, val_16);\
+    \
+    outbuff = vreinterpret_u8_s8(vmovn_s16(vcombine_s16(vmovn_s32(temp_low), vmovn_s32(temp_high))));\
+})
+
 void cc_vector(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8_t* ycc_data) {
     uint8x8x3_t buff;
 
@@ -50,64 +69,13 @@ void cc_vector(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8
         rgb_high.val[2] = vget_high_s16(vreinterpretq_s16_u16(vmovl_u8(buff.val[2])));
 
         // R pixels
-
-        temp_low = vmull_lane_s16(rgb_low.val[0], coeff1, 0);
-        temp_low = vmlal_lane_s16(temp_low, rgb_low.val[1], coeff1, 1);
-        temp_low = vmlal_lane_s16(temp_low, rgb_low.val[2], coeff1, 2);
-        temp_low = vshrq_n_s32(temp_low, 8);
-        temp_low = vaddq_s32(temp_low, val_16);
-        temp_low = vminq_s32(temp_low, val_y_max);
-        temp_low = vmaxq_s32(temp_low, val_16);
-
-        temp_high = vmull_lane_s16(rgb_high.val[0], coeff1, 0);
-        temp_high = vmlal_lane_s16(temp_high, rgb_high.val[1], coeff1, 1);
-        temp_high = vmlal_lane_s16(temp_high, rgb_high.val[2], coeff1, 2);
-        temp_high = vshrq_n_s32(temp_high, 8);
-        temp_high = vaddq_s32(temp_high, val_16);
-        temp_high = vminq_s32(temp_high, val_y_max);
-        temp_high = vmaxq_s32(temp_high, val_16);
-
-        buff.val[0] = vreinterpret_u8_s8(vmovn_s16(vcombine_s16(vmovn_s32(temp_low), vmovn_s32(temp_high))));
-
+        VSTEP(coeff1, 0, coeff1, 1, coeff1, 2, val_16, val_y_max, buff.val[0]);
+    
         // G pixels
-
-        temp_low = vmull_lane_s16(rgb_low.val[0], coeff1, 3);
-        temp_low = vmlal_lane_s16(temp_low, rgb_low.val[1], coeff2, 0);
-        temp_low = vmlal_lane_s16(temp_low, rgb_low.val[2], coeff2, 1);
-        temp_low = vshrq_n_s32(temp_low, 8);
-        temp_low = vaddq_s32(temp_low, val_128);
-        temp_low = vminq_s32(temp_low, val_c_max);
-        temp_low = vmaxq_s32(temp_low, val_16);
-
-        temp_high = vmull_lane_s16(rgb_high.val[0], coeff1, 3);
-        temp_high = vmlal_lane_s16(temp_high, rgb_high.val[1], coeff2, 0);
-        temp_high = vmlal_lane_s16(temp_high, rgb_high.val[2], coeff2, 1);
-        temp_high = vshrq_n_s32(temp_high, 8);
-        temp_high = vaddq_s32(temp_high, val_128);
-        temp_high = vminq_s32(temp_high, val_c_max);
-        temp_high = vmaxq_s32(temp_high, val_16);
-
-        buff.val[1] = vreinterpret_u8_s8(vmovn_s16(vcombine_s16(vmovn_s32(temp_low), vmovn_s32(temp_high))));
+        VSTEP(coeff1, 3, coeff2, 0, coeff2, 1, val_128, val_c_max, buff.val[1]);
 
         // B pixels
-
-        temp_low = vmull_lane_s16(rgb_low.val[0], coeff2, 1);
-        temp_low = vmlal_lane_s16(temp_low, rgb_low.val[1], coeff2, 2);
-        temp_low = vmlal_lane_s16(temp_low, rgb_low.val[2], coeff2, 3);
-        temp_low = vshrq_n_s32(temp_low, 8);
-        temp_low = vaddq_s32(temp_low, val_128);
-        temp_low = vminq_s32(temp_low, val_c_max);
-        temp_low = vmaxq_s32(temp_low, val_16);
-
-        temp_high = vmull_lane_s16(rgb_high.val[0], coeff2, 1);
-        temp_high = vmlal_lane_s16(temp_high, rgb_high.val[1], coeff2, 2);
-        temp_high = vmlal_lane_s16(temp_high, rgb_high.val[2], coeff2, 3);
-        temp_high = vshrq_n_s32(temp_high, 8);
-        temp_high = vaddq_s32(temp_high, val_128);
-        temp_high = vminq_s32(temp_high, val_c_max);
-        temp_high = vmaxq_s32(temp_high, val_16);
-
-        buff.val[2] = vreinterpret_u8_s8(vmovn_s16(vcombine_s16(vmovn_s32(temp_low), vmovn_s32(temp_high))));
+        VSTEP(coeff2, 1, coeff2, 2, coeff2, 3, val_128, val_c_max, buff.val[2]);
 
         vst3_u8(rgb_data+pixel*3, buff);
     }
