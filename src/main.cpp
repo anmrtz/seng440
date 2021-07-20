@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
     }
 
     // Load starting RGB image
-    image rgb_img("test.png");
+    image rgb_img("large.png");
 
     perform_cc(rgb_img, cc_type->second);
 
