@@ -1,1 +1,1 @@
-convert -size 1920x1080 -sampling-factor 4:2:0 -interlace plane -depth 8 yuv:ycc-result.raw image.png
+convert -size 1920x1080 -sampling-factor 4:2:0 -interlace plane -depth 8 yuv:ycc-result.raw back-conv.png
