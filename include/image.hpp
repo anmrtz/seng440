@@ -16,7 +16,7 @@ class image {
             throw std::runtime_error("Failed to load PNG file " + filename);
         }
 
-        // Pad data arrays to multiples of 16 to ensure compability with vectorization algorithms
+        // Pad data arrays to multiples of 24 to ensure compability with vectorization algorithms
         const std::size_t data_size = width*height*3;
         const std::size_t padded_size = get_padded_size();
         if ((data_size) != padded_size) {

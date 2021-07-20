@@ -95,43 +95,6 @@ void cc_naive(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8_
                 ycc_data[ycc_cb_idx] = *g; // Cb
                 ycc_data[ycc_cr_idx] = *b; // Cr
             }
-            // Process 1x2 terminal row clusters
-            else if ((row == rgb_height - 1) && (col % 2 == 1)) {
-                const uint32_t left_idx = idx - 3;
-
-                *g = avg2(*g, rgb_data[left_idx+1]);
-                *b = avg2(*b, rgb_data[left_idx+2]);
-
-                // Write downsampled chroma plane values to output array
-                const uint32_t ycc_cb_idx = (rgb_width * rgb_height) + (col >> 1) + (row >> 1)*(rgb_width >> 1);
-                const uint32_t ycc_cr_idx = (rgb_width * rgb_height) + ((rgb_width*rgb_height) >> 2) + (col >> 1) + (row >> 1)*(rgb_width >> 1);
-
-                ycc_data[ycc_cb_idx] = *g; // Cb
-                ycc_data[ycc_cr_idx] = *b; // Cr
-            }
-            // Process 2x1 terminal column clusters
-            else if ((col == rgb_width - 1) && (row % 2 == 1)) {
-                const uint32_t up_idx = idx - (rgb_width*3);
-
-                *g = avg2(*g, rgb_data[up_idx+1]);
-                *b = avg2(*b, rgb_data[up_idx+2]);
-
-                // Write downsampled chroma plane values to output array
-                const uint32_t ycc_cb_idx = (rgb_width * rgb_height) + (col >> 1) + (row >> 1)*(rgb_width >> 1);
-                const uint32_t ycc_cr_idx = (rgb_width * rgb_height) + ((rgb_width*rgb_height) >> 2) + (col >> 1) + (row >> 1)*(rgb_width >> 1);
-
-                ycc_data[ycc_cb_idx] = *g; // Cb
-                ycc_data[ycc_cr_idx] = *b; // Cr
-           }
-           // Process terminal corner pixel
-           else if (((row == rgb_height - 1) && (col == rgb_width - 1)) && ((row % 2 == 0) && (col % 2 == 0))) {
-                // Write downsampled chroma plane values to output array
-                const uint32_t ycc_cb_idx = (rgb_width * rgb_height) + (col >> 1) + (row >> 1)*(rgb_width >> 1);
-                const uint32_t ycc_cr_idx = (rgb_width * rgb_height) + ((rgb_width*rgb_height) >> 2) + (col >> 1) + (row >> 1)*(rgb_width >> 1);
-
-                ycc_data[ycc_cb_idx] = *g; // Cb
-                ycc_data[ycc_cr_idx] = *b; // Cr
-           }
         }
     }
 }

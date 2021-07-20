@@ -32,6 +32,12 @@ static const std::map<std::string, CC_IMPL> cc_lookup = {
 void perform_cc(const image& rgb_img, CC_IMPL cc_impl) {
     const uint32_t rgb_width = rgb_img.get_width();
     const uint32_t rgb_height = rgb_img.get_height();
+
+    if ((rgb_width == 0) || (rgb_height == 0) 
+        || (rgb_width % 2) || (rgb_height % 2)) {
+        throw std::runtime_error("Image size must be multiple of 2x2 blocks");
+    }
+
     uint8_t* rgb_data = rgb_img.get_pixel_data();
     
     std::vector<uint8_t> planar_ycc_data(rgb_img.get_downsampled_size());

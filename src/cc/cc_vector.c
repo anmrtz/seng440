@@ -155,35 +155,45 @@ static void convert_pixels_16(uint8_t* rgb_data, uint32_t num_pixels) {
 
 void cc_vector(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8_t* ycc_data) {
     convert_pixels_16(rgb_data, rgb_height*rgb_width);
+
 /*
     uint8x8x3_t buff_top;
     uint8x8x3_t buff_bottom;
 
-    uint8_t top_row_temp[24];
-    uint8_t bottom_row_temp[24];
-
     // Downsample converted pixels
     for (uint32_t row = 0; row < rgb_height; row += 2) {
-        for (uint32_t col = 0; col < rgb_width; col += 8) {
-            // Destination luma sections
-            const uint32_t ycc_y_top_idx = (col + (row * rgb_width));
-            const uint32_t ycc_y_bottom_idx = (col + ((row+1) * rgb_width));
+        // If not last row, then process row pair
+        if ((rgb_height - row) > 1) {
+            for (uint32_t col = 0; col < rgb_width; col += 16) {
+                // Destination luma sections
+                const uint32_t ycc_y_top_idx = (col + (row * rgb_width));
+                const uint32_t ycc_y_bottom_idx = (col + ((row+1) * rgb_width));
 
-            // Destination chroma sections
-            const uint32_t ycc_cb_top_idx = (rgb_width * rgb_height) + (col >> 1) + (row >> 1)*(rgb_width >> 1);
-            const uint32_t ycc_cr_top_idx = (rgb_width * rgb_height) + ((rgb_width*rgb_height) >> 2) + (col >> 1) + (row >> 1)*(rgb_width >> 1);
-            const uint32_t ycc_cb_bottom_idx = (rgb_width * rgb_height) + (col >> 1) + ((row+1) >> 1)*(rgb_width >> 1);
-            const uint32_t ycc_cr_bottom_idx = (rgb_width * rgb_height) + ((rgb_width*rgb_height) >> 2) + (col >> 1) + ((row+1) >> 1)*(rgb_width >> 1);
+                // Destination chroma sections
+                const uint32_t ycc_cb_top_idx = (rgb_width * rgb_height) + (col >> 1) + (row >> 1)*(rgb_width >> 1);
+                const uint32_t ycc_cr_top_idx = (rgb_width * rgb_height) + ((rgb_width*rgb_height) >> 2) + (col >> 1) + (row >> 1)*(rgb_width >> 1);
+                const uint32_t ycc_cb_bottom_idx = (rgb_width * rgb_height) + (col >> 1) + ((row+1) >> 1)*(rgb_width >> 1);
+                const uint32_t ycc_cr_bottom_idx = (rgb_width * rgb_height) + ((rgb_width*rgb_height) >> 2) + (col >> 1) + ((row+1) >> 1)*(rgb_width >> 1);
 
-            // Base source pixel
-            const uint32_t pixel_top = row*col;
-            const uint32_t pixel_bottom = (row+1)*col;
+                // Base source pixel
+                const uint32_t pixel_top = row*col;
+                const uint32_t pixel_bottom = (row+1)*col;
 
-            memcpy(top_row_temp, rgb_data+pixel_top*3, 24);
 
-            // Full row?
-            buff_top = vld3_u8(rgb_data+pixel_top*3);
+            }
+        }
+        // Process last row
+        else {
+            for (uint32_t col = 0; col < rgb_width; col += 2) {
 
+                // If not last pixel, then process pair
+                if ((rgb_width - col) > 1) {
+
+                }
+                else {
+
+                }
+            }
         }
     }
 */
@@ -214,43 +224,6 @@ void cc_vector(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8
                 ycc_data[ycc_cb_idx] = *g; // Cb
                 ycc_data[ycc_cr_idx] = *b; // Cr
             }
-            // Process 1x2 terminal row clusters
-            else if ((row == rgb_height - 1) && (col % 2 == 1)) {
-                const uint32_t left_idx = idx - 3;
-
-                *g = avg2(*g, rgb_data[left_idx+1]);
-                *b = avg2(*b, rgb_data[left_idx+2]);
-
-                // Write downsampled chroma plane values to output array
-                const uint32_t ycc_cb_idx = (rgb_width * rgb_height) + (col >> 1) + (row >> 1)*(rgb_width >> 1);
-                const uint32_t ycc_cr_idx = (rgb_width * rgb_height) + ((rgb_width*rgb_height) >> 2) + (col >> 1) + (row >> 1)*(rgb_width >> 1);
-
-                ycc_data[ycc_cb_idx] = *g; // Cb
-                ycc_data[ycc_cr_idx] = *b; // Cr
-            }
-            // Process 2x1 terminal column clusters
-            else if ((col == rgb_width - 1) && (row % 2 == 1)) {
-                const uint32_t up_idx = idx - (rgb_width*3);
-
-                *g = avg2(*g, rgb_data[up_idx+1]);
-                *b = avg2(*b, rgb_data[up_idx+2]);
-
-                // Write downsampled chroma plane values to output array
-                const uint32_t ycc_cb_idx = (rgb_width * rgb_height) + (col >> 1) + (row >> 1)*(rgb_width >> 1);
-                const uint32_t ycc_cr_idx = (rgb_width * rgb_height) + ((rgb_width*rgb_height) >> 2) + (col >> 1) + (row >> 1)*(rgb_width >> 1);
-
-                ycc_data[ycc_cb_idx] = *g; // Cb
-                ycc_data[ycc_cr_idx] = *b; // Cr
-           }
-           // Process terminal corner pixel
-           else if (((row == rgb_height - 1) && (col == rgb_width - 1)) && ((row % 2 == 0) && (col % 2 == 0))) {
-                // Write downsampled chroma plane values to output array
-                const uint32_t ycc_cb_idx = (rgb_width * rgb_height) + (col >> 1) + (row >> 1)*(rgb_width >> 1);
-                const uint32_t ycc_cr_idx = (rgb_width * rgb_height) + ((rgb_width*rgb_height) >> 2) + (col >> 1) + (row >> 1)*(rgb_width >> 1);
-
-                ycc_data[ycc_cb_idx] = *g; // Cb
-                ycc_data[ycc_cr_idx] = *b; // Cr
-           }
         }
     }
 
