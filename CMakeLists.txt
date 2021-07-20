@@ -11,6 +11,7 @@ add_library(lodepng src/lodepng.cpp)
 
 add_executable(${PROJECT_NAME} 
     src/main.cpp
+    src/cc/cc_float.c
     src/cc/cc_naive.c
     src/cc/cc_vector.c
     )

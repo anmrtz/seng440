@@ -18,11 +18,13 @@ using std::chrono::duration;
 using std::chrono::milliseconds;
 
 enum CC_IMPL {
+    FLOAT,
     NAIVE,
     VECTOR
 };
 
 static const std::map<std::string, CC_IMPL> cc_lookup = {
+    {"float", FLOAT},
     {"naive", NAIVE},
     {"vector", VECTOR},
 };
@@ -36,6 +38,12 @@ void perform_cc(const image& rgb_img, CC_IMPL cc_impl) {
     
     decltype(high_resolution_clock::now()) t1, t2;
     switch (cc_impl) {
+        case FLOAT:
+            // Perform naive RGB->YCC colorspace conversion
+            std::cout << "Performing floating-point conversion\n";
+            t1 = high_resolution_clock::now();
+            cc_float(rgb_data, rgb_width, rgb_height, planar_ycc_data.data());
+        break;
         case NAIVE:
             // Perform naive RGB->YCC colorspace conversion
             std::cout << "Performing naive conversion\n";
