@@ -3,7 +3,8 @@
 
 #include "cc.h"
 
-// Vectorized pixel conversion 32 bits
+#ifdef CONV_32_BIT
+// Vectorized RGB->YCC pixel conversion (32 bits)
 #define VCONV_STEP_32(covec1, coidx1, covec2, coidx2, covec3, coidx3, skewvec, resmax, outbuff) ({\
     temp_low = vmull_lane_s16(rgb_low.val[0], covec1, coidx1);\
     temp_high = vmull_lane_s16(rgb_high.val[0], covec1, coidx1);\
@@ -22,8 +23,7 @@
     \
     outbuff = vreinterpret_u8_s8(vmovn_s16(vcombine_s16(vmovn_s32(temp_low), vmovn_s32(temp_high))));\
 })
-/*
-static void convert_pixels_32(uint8_t* rgb_data, uint32_t num_pixels) {
+static void convert_pixels(uint8_t* rgb_data, uint32_t num_pixels) {
     uint8x8x3_t buff;
 
     int32x4_t temp_low, temp_high;
@@ -49,8 +49,6 @@ static void convert_pixels_32(uint8_t* rgb_data, uint32_t num_pixels) {
     int32x4_t val_y_max = vdupq_n_s32(Y_MAX_VAL);
     int32x4_t val_c_max = vdupq_n_s32(C_MAX_VAL);
 
-    __builtin_prefetch(rgb_data);
-
     for (uint32_t pixel = 0; pixel < num_pixels; pixel += 8) {
         buff = vld3_u8(rgb_data+pixel*3);
 
@@ -73,8 +71,10 @@ static void convert_pixels_32(uint8_t* rgb_data, uint32_t num_pixels) {
         vst3_u8(rgb_data+pixel*3, buff);
     }
 }
-*/
-static void convert_pixels_16(uint8_t* rgb_data, uint32_t num_pixels) {
+
+#else
+// Vectorized RGB->YCC pixel conversion (16 bits)
+static void convert_pixels(uint8_t* rgb_data, uint32_t num_pixels) {
     uint8x8x3_t buff;
 
     int16x8x3_t rgb;
@@ -142,10 +142,10 @@ static void convert_pixels_16(uint8_t* rgb_data, uint32_t num_pixels) {
         vst3_u8(rgb_data+pixel*3, buff);
     }
 }
+#endif
 
-void cc_vector(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8_t* ycc_data) {
-    convert_pixels_16(rgb_data, rgb_height*rgb_width);
-
+// Downsample converted pixels and write to YCC image buffer
+static void downsample_pixels(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8_t* ycc_data) {
     uint8x16x3_t row_top, row_bottom;
     uint16x8_t pairs_top, pairs_bottom, pairs_sum;
 
@@ -185,4 +185,9 @@ void cc_vector(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8
             vst1_u8(ycc_data + ycc_cr_idx, vmovn_u16(pairs_sum));
         }
     }
+}
+
+void cc_vector(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8_t* ycc_data) {
+    convert_pixels(rgb_data, rgb_height*rgb_width);
+    downsample_pixels(rgb_data, rgb_width, rgb_height, ycc_data);
 }
