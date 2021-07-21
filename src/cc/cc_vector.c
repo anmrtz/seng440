@@ -3,16 +3,6 @@
 
 #include "cc.h"
 
-#define VECTOR_WIDTH 8
-
-static inline uint8_t avg2(uint8_t e1, uint8_t e2) {
-    return (e1 + e2) >> 1;
-}
-
-static inline uint8_t avg4(uint8_t e1, uint8_t e2, uint8_t e3, uint8_t e4) {
-    return (e1 + e2 + e3 + e4) >> 2;
-}
-
 // Vectorized pixel conversion 32 bits
 #define VCONV_STEP_32(covec1, coidx1, covec2, coidx2, covec3, coidx3, skewvec, resmax, outbuff) ({\
     temp_low = vmull_lane_s16(rgb_low.val[0], covec1, coidx1);\
@@ -156,75 +146,43 @@ static void convert_pixels_16(uint8_t* rgb_data, uint32_t num_pixels) {
 void cc_vector(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8_t* ycc_data) {
     convert_pixels_16(rgb_data, rgb_height*rgb_width);
 
-/*
-    uint8x8x3_t buff_top;
-    uint8x8x3_t buff_bottom;
+    uint8x16x3_t row_top, row_bottom;
+    uint16x8_t pairs_top, pairs_bottom, pairs_sum;
 
     // Downsample converted pixels
     for (uint32_t row = 0; row < rgb_height; row += 2) {
-        // If not last row, then process row pair
-        if ((rgb_height - row) > 1) {
-            for (uint32_t col = 0; col < rgb_width; col += 16) {
-                // Destination luma sections
-                const uint32_t ycc_y_top_idx = (col + (row * rgb_width));
-                const uint32_t ycc_y_bottom_idx = (col + ((row+1) * rgb_width));
+        for (uint32_t col = 0; col < rgb_width; col += 16) {
+            // Base source pixel
+            const uint32_t pixel_top = (col + (row * rgb_width));
+            const uint32_t pixel_bottom = (col + ((row+1) * rgb_width));
 
-                // Destination chroma sections
-                const uint32_t ycc_cb_top_idx = (rgb_width * rgb_height) + (col >> 1) + (row >> 1)*(rgb_width >> 1);
-                const uint32_t ycc_cr_top_idx = (rgb_width * rgb_height) + ((rgb_width*rgb_height) >> 2) + (col >> 1) + (row >> 1)*(rgb_width >> 1);
-                const uint32_t ycc_cb_bottom_idx = (rgb_width * rgb_height) + (col >> 1) + ((row+1) >> 1)*(rgb_width >> 1);
-                const uint32_t ycc_cr_bottom_idx = (rgb_width * rgb_height) + ((rgb_width*rgb_height) >> 2) + (col >> 1) + ((row+1) >> 1)*(rgb_width >> 1);
+            // Destination chroma sections
+            const uint32_t ycc_cb_idx = (rgb_width * rgb_height) + (col >> 1) + (row >> 1)*(rgb_width >> 1);
+            const uint32_t ycc_cr_idx = (rgb_width * rgb_height) + ((rgb_width*rgb_height) >> 2) + (col >> 1) + (row >> 1)*(rgb_width >> 1);
 
-                // Base source pixel
-                const uint32_t pixel_top = row*col;
-                const uint32_t pixel_bottom = (row+1)*col;
+            // Load YCbCr values for rows
+            row_top = vld3q_u8(rgb_data + pixel_top*3);
+            row_bottom = vld3q_u8(rgb_data + pixel_bottom*3);
 
+            // Store converted luma values
+            vst1q_u8(ycc_data + pixel_top, row_top.val[0]);
+            vst1q_u8(ycc_data + pixel_bottom, row_bottom.val[0]);
 
-            }
-        }
-        // Process last row
-        else {
-            for (uint32_t col = 0; col < rgb_width; col += 2) {
+            // Downsample Cb values
+            pairs_top = vpaddlq_u8(row_top.val[1]);
+            pairs_bottom = vpaddlq_u8(row_bottom.val[1]);
+            pairs_sum = vaddq_u16(pairs_top, pairs_bottom);
+            pairs_sum = vshrq_n_u16(pairs_sum, 2);
+            // Store downsampled Cb values
+            vst1_u8(ycc_data + ycc_cb_idx, vmovn_u16(pairs_sum));
 
-                // If not last pixel, then process pair
-                if ((rgb_width - col) > 1) {
-
-                }
-                else {
-
-                }
-            }
-        }
-    }
-*/
-
-    // Downsample converted pixels
-    for (uint32_t row = 0; row < rgb_height; ++row) {
-        for (uint32_t col = 0; col < rgb_width; ++col) {
-            const uint32_t ycc_y_idx = (col + (row * rgb_width));
-            const uint32_t idx = 3 * ycc_y_idx;
-
-            ycc_data[ycc_y_idx] = rgb_data[idx];
-            uint8_t* g = rgb_data+(idx+1);
-            uint8_t* b = rgb_data+(idx+2);  
-
-            // Process 4x4 clusters for downsampling
-            if ((row % 2 == 1) && (col % 2 == 1)) {
-                const uint32_t left_idx = idx - 3;
-                const uint32_t up_idx = idx - (rgb_width*3);
-                const uint32_t up_left_idx = (idx - 3) - (rgb_width*3);
-
-                *g = avg4(*g, rgb_data[left_idx+1], rgb_data[up_idx+1], rgb_data[up_left_idx+1]);
-                *b = avg4(*b, rgb_data[left_idx+2], rgb_data[up_idx+2], rgb_data[up_left_idx+2]);
-
-                // Write downsampled chroma plane values to output array
-                const uint32_t ycc_cb_idx = (rgb_width * rgb_height) + (col >> 1) + (row >> 1)*(rgb_width >> 1);
-                const uint32_t ycc_cr_idx = (rgb_width * rgb_height) + ((rgb_width*rgb_height) >> 2) + (col >> 1) + (row >> 1)*(rgb_width >> 1);
-
-                ycc_data[ycc_cb_idx] = *g; // Cb
-                ycc_data[ycc_cr_idx] = *b; // Cr
-            }
+            // Downsample Cr values
+            pairs_top = vpaddlq_u8(row_top.val[2]);
+            pairs_bottom = vpaddlq_u8(row_bottom.val[2]);
+            pairs_sum = vaddq_u16(pairs_top, pairs_bottom);
+            pairs_sum = vshrq_n_u16(pairs_sum, 2);
+            // Store downsampled Cr values
+            vst1_u8(ycc_data + ycc_cr_idx, vmovn_u16(pairs_sum));
         }
     }
-
 }
