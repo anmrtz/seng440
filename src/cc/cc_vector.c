@@ -73,12 +73,14 @@ static void convert_pixels(uint8_t* rgb_data, uint32_t num_pixels) {
 }
 
 #else
-// Vectorized RGB->YCC pixel conversion (16 bits)
-static void convert_pixels(uint8_t* rgb_data, uint32_t num_pixels) {
+// Vectorized RGB->YCC pixel conversion (16 bits). Also writes converted luma pixels to YCC buffer
+static void convert_pixels(uint8_t* rgb_data, uint32_t num_pixels, uint8_t* ycc_data) {
     uint8x8x3_t buff;
 
     int16x8x3_t rgb;
     int16x8x3_t temp;
+    uint8x8_t y;
+    uint8x8x2_t c;
 
     int16x4_t coeff1;
     int16x4_t coeff2;
@@ -135,18 +137,19 @@ static void convert_pixels(uint8_t* rgb_data, uint32_t num_pixels) {
         temp.val[1] = vmaxq_s16(temp.val[1], val_16);
         temp.val[2] = vmaxq_s16(temp.val[2], val_16);
 
-        buff.val[0] = vreinterpret_u8_s8(vmovn_s16(temp.val[0]));
-        buff.val[1] = vreinterpret_u8_s8(vmovn_s16(temp.val[1]));
-        buff.val[2] = vreinterpret_u8_s8(vmovn_s16(temp.val[2]));
+        y = vreinterpret_u8_s8(vmovn_s16(temp.val[0]));
+        c.val[0] = vreinterpret_u8_s8(vmovn_s16(temp.val[1]));
+        c.val[1] = vreinterpret_u8_s8(vmovn_s16(temp.val[2]));
 
-        vst3_u8(rgb_data+pixel*3, buff);
+        vst2_u8(rgb_data+pixel*2, c);        
+        vst1_u8(ycc_data+pixel, y);
     }
 }
 #endif
 
-// Downsample converted pixels and write to YCC image buffer
+// Downsample converted chroma pixels and write to YCC image buffer
 static void downsample_pixels(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8_t* ycc_data) {
-    uint8x16x3_t row_top, row_bottom;
+    uint8x16x2_t row_top, row_bottom;
     uint16x8_t pairs_top, pairs_bottom, pairs_sum;
 
     // Downsample converted pixels
@@ -161,24 +164,20 @@ static void downsample_pixels(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rg
             const uint32_t ycc_cr_idx = (rgb_width * rgb_height) + ((rgb_width*rgb_height) >> 2) + (col >> 1) + (row >> 1)*(rgb_width >> 1);
 
             // Load YCbCr values for rows
-            row_top = vld3q_u8(rgb_data + pixel_top*3);
-            row_bottom = vld3q_u8(rgb_data + pixel_bottom*3);
-
-            // Store converted luma values
-            vst1q_u8(ycc_data + pixel_top, row_top.val[0]);
-            vst1q_u8(ycc_data + pixel_bottom, row_bottom.val[0]);
+            row_top = vld2q_u8(rgb_data + pixel_top*2);
+            row_bottom = vld2q_u8(rgb_data + pixel_bottom*2);
 
             // Downsample Cb values
-            pairs_top = vpaddlq_u8(row_top.val[1]);
-            pairs_bottom = vpaddlq_u8(row_bottom.val[1]);
+            pairs_top = vpaddlq_u8(row_top.val[0]);
+            pairs_bottom = vpaddlq_u8(row_bottom.val[0]);
             pairs_sum = vaddq_u16(pairs_top, pairs_bottom);
             pairs_sum = vshrq_n_u16(pairs_sum, 2);
             // Store downsampled Cb values
             vst1_u8(ycc_data + ycc_cb_idx, vmovn_u16(pairs_sum));
 
             // Downsample Cr values
-            pairs_top = vpaddlq_u8(row_top.val[2]);
-            pairs_bottom = vpaddlq_u8(row_bottom.val[2]);
+            pairs_top = vpaddlq_u8(row_top.val[1]);
+            pairs_bottom = vpaddlq_u8(row_bottom.val[1]);
             pairs_sum = vaddq_u16(pairs_top, pairs_bottom);
             pairs_sum = vshrq_n_u16(pairs_sum, 2);
             // Store downsampled Cr values
@@ -188,6 +187,6 @@ static void downsample_pixels(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rg
 }
 
 void cc_vector(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8_t* ycc_data) {
-    convert_pixels(rgb_data, rgb_height*rgb_width);
+    convert_pixels(rgb_data, rgb_height*rgb_width, ycc_data);
     downsample_pixels(rgb_data, rgb_width, rgb_height, ycc_data);
 }
