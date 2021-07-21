@@ -2,14 +2,14 @@
 
 #include "cc.h"
 
-static inline void clip_f(float* val, float max) {
+static void __attribute__ ((noinline)) clip_f(float* val, float max) {
     if (*val < YCC_MIN_VAL)
         *val = YCC_MIN_VAL;
     else if (*val > max)
         *val = max;
 }
 
-static inline uint8_t avg4(uint8_t e1, uint8_t e2, uint8_t e3, uint8_t e4) {
+static uint8_t __attribute__ ((noinline)) avg4(uint8_t e1, uint8_t e2, uint8_t e3, uint8_t e4) {
     return (e1 + e2 + e3 + e4) >> 2;
 }
 

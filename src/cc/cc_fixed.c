@@ -24,9 +24,9 @@ static inline uint8_t avg4(uint8_t e1, uint8_t e2, uint8_t e3, uint8_t e4) {
 
 void cc_fixed(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8_t* ycc_data) {
     // Convert pixel values from RGB to YCC
-    uint32_t ycc_y_idx = 0;
     for (uint32_t row = 0; row < rgb_height; ++row) {
         for (uint32_t col = 0; col < rgb_width; ++col) {
+            const uint32_t ycc_y_idx = (col + (row * rgb_width));
             const uint32_t idx = 3 * ycc_y_idx;
 
             uint8_t* r = rgb_data+(idx);
@@ -63,8 +63,6 @@ void cc_fixed(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8_
             }
             // Write luma value to output array
             ycc_data[ycc_y_idx] = *r;
-
-            ++ycc_y_idx;
         }
     }
 
