@@ -20,12 +20,14 @@ using std::chrono::milliseconds;
 enum CC_IMPL {
     FLOAT,
     NAIVE,
+    FIXED,
     VECTOR
 };
 
 static const std::map<std::string, CC_IMPL> cc_lookup = {
     {"float", FLOAT},
     {"naive", NAIVE},
+    {"fixed", FIXED},
     {"vector", VECTOR},
 };
 
@@ -52,7 +54,13 @@ void perform_cc(const image& rgb_img, CC_IMPL cc_impl) {
         break;
         case NAIVE:
             // Perform naive RGB->YCC colorspace conversion
-            std::cout << "Performing naive conversion\n";
+            std::cout << "Performing naive sequential conversion\n";
+            t1 = high_resolution_clock::now();
+            cc_naive(rgb_data, rgb_width, rgb_height, planar_ycc_data.data());
+        break;
+        case FIXED:
+            // Perform naive RGB->YCC colorspace conversion
+            std::cout << "Performing optimized fixed-point sequential conversion\n";
             t1 = high_resolution_clock::now();
             cc_naive(rgb_data, rgb_width, rgb_height, planar_ycc_data.data());
         break;

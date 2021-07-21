@@ -3,14 +3,14 @@
 #include "cc.h"
 
 #ifdef CONV_32_BIT
-static inline void clip(int32_t* val, int32_t max) {
+static void __attribute__ ((noinline)) clip(int32_t* val, int32_t max) {
     if (*val < YCC_MIN_VAL)
         *val = YCC_MIN_VAL;
     else if (*val > max)
         *val = max;
 }
 #else
-static inline void clip(int16_t* val, int16_t max) {
+static void __attribute__ ((noinline)) clip(int16_t* val, int16_t max) {
     if (*val < YCC_MIN_VAL)
         *val = YCC_MIN_VAL;
     else if (*val > max)
@@ -18,11 +18,7 @@ static inline void clip(int16_t* val, int16_t max) {
 }
 #endif
 
-static inline uint8_t avg2(uint8_t e1, uint8_t e2) {
-    return (e1 + e2) >> 1;
-}
-
-static inline uint8_t avg4(uint8_t e1, uint8_t e2, uint8_t e3, uint8_t e4) {
+static uint8_t __attribute__ ((noinline)) avg4(uint8_t e1, uint8_t e2, uint8_t e3, uint8_t e4) {
     return (e1 + e2 + e3 + e4) >> 2;
 }
 

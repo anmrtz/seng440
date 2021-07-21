@@ -9,10 +9,6 @@ static inline void clip_f(float* val, float max) {
         *val = max;
 }
 
-static inline uint8_t avg2(uint8_t e1, uint8_t e2) {
-    return (e1 + e2) >> 1;
-}
-
 static inline uint8_t avg4(uint8_t e1, uint8_t e2, uint8_t e3, uint8_t e4) {
     return (e1 + e2 + e3 + e4) >> 2;
 }
