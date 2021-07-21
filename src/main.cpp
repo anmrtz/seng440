@@ -47,7 +47,7 @@ void perform_cc(const image& rgb_img, CC_IMPL cc_impl) {
     decltype(high_resolution_clock::now()) t1, t2;
     switch (cc_impl) {
         case FLOAT:
-            // Perform naive RGB->YCC colorspace conversion
+            // Perform floating-point RGB->YCC colorspace conversion
             std::cout << "Performing floating-point conversion\n";
             t1 = high_resolution_clock::now();
             cc_float(rgb_data, rgb_width, rgb_height, planar_ycc_data.data());
@@ -62,7 +62,7 @@ void perform_cc(const image& rgb_img, CC_IMPL cc_impl) {
             // Perform naive RGB->YCC colorspace conversion
             std::cout << "Performing optimized fixed-point sequential conversion\n";
             t1 = high_resolution_clock::now();
-            cc_naive(rgb_data, rgb_width, rgb_height, planar_ycc_data.data());
+            cc_fixed(rgb_data, rgb_width, rgb_height, planar_ycc_data.data());
         break;
         case VECTOR:
             // Perform ARM NEON vectorized conversion
