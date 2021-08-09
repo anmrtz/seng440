@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <algorithm>
 
-#include "lodepng.h"
+#include "lodepng/lodepng.h"
 
 // Wrapper for loaded images
 class image {

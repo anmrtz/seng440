@@ -1,5 +1,6 @@
 #include <arm_neon.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "cc.h"
 
@@ -231,7 +232,147 @@ static void downsample_pixels(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rg
     }
 }
 
+static void convert_and_downsample_pixels(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8_t* ycc_data) {
+    uint8x8x3_t buff;
+    int16x8x3_t rgb;
+    int16x8x3_t temp;
+
+    uint8x8_t y;
+    uint8x8x2_t c_top, c_bottom;
+    uint16x4x2_t c_result;
+    uint8_t cb_cr_buffer[8];
+
+    int16x4_t coeff1;
+    int16x4_t coeff2;
+
+    coeff1[0] = 33;
+    coeff1[1] = 65;
+    coeff1[2] = 13;
+
+    coeff1[3] = -19;
+    coeff2[0] = -37;
+    coeff2[1] = 56;
+
+    coeff2[2] = -47;
+    coeff2[3] = -9;
+
+    int16x8_t val_16 = vdupq_n_s16(16);
+    int16x8_t val_128 = vdupq_n_s16(128);
+
+    int16x8_t val_y_max = vdupq_n_s16(Y_MAX_VAL);
+    int16x8_t val_c_max = vdupq_n_s16(C_MAX_VAL);
+
+    // Downsample converted pixels
+    for (uint32_t row = 0; row < rgb_height; row += 2) {
+        for (uint32_t col = 0; col < rgb_width; col += 8) {
+            // Base source pixel
+            const uint32_t pixel_top = (col + (row * rgb_width));
+            const uint32_t pixel_bottom = (col + ((row+1) * rgb_width));
+
+            // Destination chroma sections
+            const uint32_t ycc_cb_idx = (rgb_width * rgb_height) + (col >> 1) + (row >> 1)*(rgb_width >> 1);
+            const uint32_t ycc_cr_idx = (rgb_width * rgb_height) + ((rgb_width*rgb_height) >> 2) + (col >> 1) + (row >> 1)*(rgb_width >> 1);
+
+            // Top row RGB->YCC calculation
+            buff = vld3_u8(rgb_data + pixel_top*3);
+            rgb.val[0] = vreinterpretq_s16_u16(vmovl_u8(buff.val[0]));
+            rgb.val[1] = vreinterpretq_s16_u16(vmovl_u8(buff.val[1]));
+            rgb.val[2] = vreinterpretq_s16_u16(vmovl_u8(buff.val[2]));
+
+            temp.val[0] = vmulq_lane_s16(rgb.val[0], coeff1, 0);
+            temp.val[1] = vmulq_lane_s16(rgb.val[0], coeff1, 3);
+            temp.val[2] = vmulq_lane_s16(rgb.val[0], coeff2, 1);
+
+            temp.val[0] = vmlaq_lane_s16(temp.val[0], rgb.val[1], coeff1, 1);
+            temp.val[1] = vmlaq_lane_s16(temp.val[1], rgb.val[1], coeff2, 0);
+            temp.val[2] = vmlaq_lane_s16(temp.val[2], rgb.val[1], coeff2, 2);
+
+            temp.val[0] = vmlaq_lane_s16(temp.val[0], rgb.val[2], coeff1, 2);
+            temp.val[1] = vmlaq_lane_s16(temp.val[1], rgb.val[2], coeff2, 1);
+            temp.val[2] = vmlaq_lane_s16(temp.val[2], rgb.val[2], coeff2, 3);
+
+            temp.val[0] = vshrq_n_s16(temp.val[0], 7);
+            temp.val[1] = vshrq_n_s16(temp.val[1], 7);
+            temp.val[2] = vshrq_n_s16(temp.val[2], 7);
+
+            temp.val[0] = vaddq_s16(temp.val[0], val_16);
+            temp.val[1] = vaddq_s16(temp.val[1], val_128);
+            temp.val[2] = vaddq_s16(temp.val[2], val_128);
+
+            temp.val[0] = vminq_s16(temp.val[0], val_y_max);
+            temp.val[1] = vminq_s16(temp.val[1], val_c_max);
+            temp.val[2] = vminq_s16(temp.val[2], val_c_max);
+
+            temp.val[0] = vmaxq_s16(temp.val[0], val_16);    
+            temp.val[1] = vmaxq_s16(temp.val[1], val_16);
+            temp.val[2] = vmaxq_s16(temp.val[2], val_16);
+
+            y = vreinterpret_u8_s8(vmovn_s16(temp.val[0]));
+            c_top.val[0] = vreinterpret_u8_s8(vmovn_s16(temp.val[1]));
+            c_top.val[1] = vreinterpret_u8_s8(vmovn_s16(temp.val[2]));
+            // Store top-row luma values
+            vst1_u8(ycc_data + pixel_top, y);
+
+            // Bottom row RGB->YCC calculation
+            buff = vld3_u8(rgb_data + pixel_bottom*3);
+            rgb.val[0] = vreinterpretq_s16_u16(vmovl_u8(buff.val[0]));
+            rgb.val[1] = vreinterpretq_s16_u16(vmovl_u8(buff.val[1]));
+            rgb.val[2] = vreinterpretq_s16_u16(vmovl_u8(buff.val[2]));
+
+            temp.val[0] = vmulq_lane_s16(rgb.val[0], coeff1, 0);
+            temp.val[1] = vmulq_lane_s16(rgb.val[0], coeff1, 3);
+            temp.val[2] = vmulq_lane_s16(rgb.val[0], coeff2, 1);
+
+            temp.val[0] = vmlaq_lane_s16(temp.val[0], rgb.val[1], coeff1, 1);
+            temp.val[1] = vmlaq_lane_s16(temp.val[1], rgb.val[1], coeff2, 0);
+            temp.val[2] = vmlaq_lane_s16(temp.val[2], rgb.val[1], coeff2, 2);
+
+            temp.val[0] = vmlaq_lane_s16(temp.val[0], rgb.val[2], coeff1, 2);
+            temp.val[1] = vmlaq_lane_s16(temp.val[1], rgb.val[2], coeff2, 1);
+            temp.val[2] = vmlaq_lane_s16(temp.val[2], rgb.val[2], coeff2, 3);
+
+            temp.val[0] = vshrq_n_s16(temp.val[0], 7);
+            temp.val[1] = vshrq_n_s16(temp.val[1], 7);
+            temp.val[2] = vshrq_n_s16(temp.val[2], 7);
+
+            temp.val[0] = vaddq_s16(temp.val[0], val_16);
+            temp.val[1] = vaddq_s16(temp.val[1], val_128);
+            temp.val[2] = vaddq_s16(temp.val[2], val_128);
+
+            temp.val[0] = vminq_s16(temp.val[0], val_y_max);
+            temp.val[1] = vminq_s16(temp.val[1], val_c_max);
+            temp.val[2] = vminq_s16(temp.val[2], val_c_max);
+
+            temp.val[0] = vmaxq_s16(temp.val[0], val_16);    
+            temp.val[1] = vmaxq_s16(temp.val[1], val_16);
+            temp.val[2] = vmaxq_s16(temp.val[2], val_16);
+
+            y = vreinterpret_u8_s8(vmovn_s16(temp.val[0]));
+            c_bottom.val[0] = vreinterpret_u8_s8(vmovn_s16(temp.val[1]));
+            c_bottom.val[1] = vreinterpret_u8_s8(vmovn_s16(temp.val[2]));
+            // Store bottom-row luma values
+            vst1_u8(ycc_data + pixel_bottom, y);
+
+            // Downsample Cb/Cr values
+            c_result.val[0] = vadd_u16(vpaddl_u8(c_top.val[0]), vpaddl_u8(c_bottom.val[0]));
+            c_result.val[1] = vadd_u16(vpaddl_u8(c_top.val[1]), vpaddl_u8(c_bottom.val[1]));
+            c_result.val[0] = vshr_n_u16(c_result.val[0], 2);
+            c_result.val[1] = vshr_n_u16(c_result.val[1], 2);
+            buff.val[0] = vmovn_u16(vcombine_u16(c_result.val[0],c_result.val[1]));
+            
+            // Store downsampled Cb/Cr values
+            vst1_u8(cb_cr_buffer, buff.val[0]);
+            memcpy(ycc_data + ycc_cb_idx, cb_cr_buffer, 4);
+            memcpy(ycc_data + ycc_cr_idx, cb_cr_buffer + 4, 4);
+        }
+    }
+}
+
 void cc_vector(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8_t* ycc_data) {
     convert_pixels(rgb_data, rgb_height*rgb_width, ycc_data);
     downsample_pixels(rgb_data, rgb_width, rgb_height, ycc_data);
+}
+
+void cc_vector2(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8_t* ycc_data) {
+    convert_and_downsample_pixels(rgb_data, rgb_width, rgb_height, ycc_data);
 }

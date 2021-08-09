@@ -5,9 +5,9 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -Wall -Werror -O1 -fverbose-asm -ft
 
 project(cc LANGUAGES C CXX)
 
-include_directories(include)
+include_directories(src)
 
-add_library(lodepng src/lodepng.cpp)
+add_library(lodepng src/lodepng/lodepng.cpp)
 
 add_executable(${PROJECT_NAME} 
     src/main.cpp

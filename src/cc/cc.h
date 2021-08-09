@@ -8,3 +8,4 @@ extern void cc_float(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height,
 extern void cc_naive(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8_t* ycc_data);
 extern void cc_fixed(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8_t* ycc_data);
 extern void cc_vector(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8_t* ycc_data);
+extern void cc_vector2(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8_t* ycc_data);

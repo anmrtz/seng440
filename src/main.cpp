@@ -6,10 +6,10 @@
 #include <chrono>
 #include <string>
 
-#include "../include/image.hpp"
+#include "image.hpp"
 
 extern "C" {
-#include "../include/cc.h"
+#include "cc/cc.h"
 }
 
 using std::chrono::high_resolution_clock;
@@ -21,7 +21,8 @@ enum CC_IMPL {
     FLOAT,
     NAIVE,
     FIXED,
-    VECTOR
+    VECTOR,
+    VECTOR2
 };
 
 static const std::map<std::string, CC_IMPL> cc_lookup = {
@@ -29,6 +30,7 @@ static const std::map<std::string, CC_IMPL> cc_lookup = {
     {"naive", NAIVE},
     {"fixed", FIXED},
     {"vector", VECTOR},
+    {"vector2", VECTOR2}
 };
 
 void perform_cc(const image& rgb_img, CC_IMPL cc_impl) {
@@ -69,6 +71,12 @@ void perform_cc(const image& rgb_img, CC_IMPL cc_impl) {
             std::cout << "Performing ARM NEON vectorized conversion\n";
             t1 = high_resolution_clock::now();
             cc_vector(rgb_data, rgb_width, rgb_height, planar_ycc_data.data());
+        break;
+        case VECTOR2:
+            // Perform ARM NEON vectorized conversion (combined algorithm)
+            std::cout << "Performing ARM NEON vectorized conversion (combined algorithm)\n";
+            t1 = high_resolution_clock::now();
+            cc_vector2(rgb_data, rgb_width, rgb_height, planar_ycc_data.data());
         break;
     }
     t2 = high_resolution_clock::now();
