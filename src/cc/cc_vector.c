@@ -167,7 +167,7 @@ static void convert_and_downsample_pixels(uint8_t* rgb_data, uint32_t rgb_width,
 
     int16x8_t temp_y;
     int16x8x2_t c_top, c_bottom;
-    uint16x4x2_t c_result;
+    uint16x8_t c_result;
     uint8_t cb_cr_buffer[8];
 
     int16x4_t coeff1;
@@ -268,7 +268,7 @@ static void convert_and_downsample_pixels(uint8_t* rgb_data, uint32_t rgb_width,
             c_bottom.val[0] = vminq_s16(c_bottom.val[0], val_c_max);
             c_bottom.val[1] = vminq_s16(c_bottom.val[1], val_c_max);
 
-            temp_y = vmaxq_s16(temp_y, val_16);    
+            temp_y = vmaxq_s16(temp_y, val_16);
             c_bottom.val[0] = vmaxq_s16(c_bottom.val[0], val_16);
             c_bottom.val[1] = vmaxq_s16(c_bottom.val[1], val_16);
 
@@ -276,15 +276,14 @@ static void convert_and_downsample_pixels(uint8_t* rgb_data, uint32_t rgb_width,
             vst1_u8(ycc_data + pixel_bottom, vreinterpret_u8_s8(vmovn_s16(temp_y)));
 
             // Downsample Cb/Cr values
-            c_result.val[0] = vreinterpret_u16_s16(vadd_s16(vpadd_s16(vget_low_s16(c_top.val[0]),vget_high_s16(c_top.val[0])), 
-                vpadd_s16(vget_low_s16(c_bottom.val[0]),vget_high_s16(c_bottom.val[0]))));
-            c_result.val[1] = vreinterpret_u16_s16(vadd_s16(vpadd_s16(vget_low_s16(c_top.val[1]),vget_high_s16(c_top.val[1])), 
-                vpadd_s16(vget_low_s16(c_bottom.val[1]),vget_high_s16(c_bottom.val[1]))));
-            c_result.val[0] = vshr_n_u16(c_result.val[0], 2);
-            c_result.val[1] = vshr_n_u16(c_result.val[1], 2);
+            c_result = vreinterpretq_u16_s16(vcombine_s16(vadd_s16(vpadd_s16(vget_low_s16(c_top.val[0]),vget_high_s16(c_top.val[0])), 
+                vpadd_s16(vget_low_s16(c_bottom.val[0]),vget_high_s16(c_bottom.val[0]))),
+                vadd_s16(vpadd_s16(vget_low_s16(c_top.val[1]),vget_high_s16(c_top.val[1])), 
+                vpadd_s16(vget_low_s16(c_bottom.val[1]),vget_high_s16(c_bottom.val[1])))));
+            c_result = vshrq_n_u16(c_result, 2);
             
             // Store downsampled Cb/Cr values
-            vst1_u8(cb_cr_buffer, vmovn_u16(vcombine_u16(c_result.val[0],c_result.val[1])));
+            vst1_u8(cb_cr_buffer, vmovn_u16(c_result));
             memcpy(ycc_data + ycc_cb_idx, cb_cr_buffer, 4);
             memcpy(ycc_data + ycc_cr_idx, cb_cr_buffer + 4, 4);
         }
