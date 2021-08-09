@@ -164,10 +164,9 @@ static void downsample_pixels(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rg
 static void convert_and_downsample_pixels(uint8_t* rgb_data, uint32_t rgb_width, uint32_t rgb_height, uint8_t* ycc_data) {
     uint8x8x3_t buff;
     int16x8x3_t rgb;
-    int16x8x3_t temp;
 
-    uint8x8_t y;
-    uint8x8x2_t c_top, c_bottom;
+    int16x8_t temp_y;
+    int16x8x2_t c_top, c_bottom;
     uint16x4x2_t c_result;
     uint8_t cb_cr_buffer[8];
 
@@ -208,39 +207,36 @@ static void convert_and_downsample_pixels(uint8_t* rgb_data, uint32_t rgb_width,
             rgb.val[1] = vreinterpretq_s16_u16(vmovl_u8(buff.val[1]));
             rgb.val[2] = vreinterpretq_s16_u16(vmovl_u8(buff.val[2]));
 
-            temp.val[0] = vmulq_lane_s16(rgb.val[0], coeff1, 0);
-            temp.val[1] = vmulq_lane_s16(rgb.val[0], coeff1, 3);
-            temp.val[2] = vmulq_lane_s16(rgb.val[0], coeff2, 1);
+            temp_y = vmulq_lane_s16(rgb.val[0], coeff1, 0);
+            c_top.val[0] = vmulq_lane_s16(rgb.val[0], coeff1, 3);
+            c_top.val[1] = vmulq_lane_s16(rgb.val[0], coeff2, 1);
 
-            temp.val[0] = vmlaq_lane_s16(temp.val[0], rgb.val[1], coeff1, 1);
-            temp.val[1] = vmlaq_lane_s16(temp.val[1], rgb.val[1], coeff2, 0);
-            temp.val[2] = vmlaq_lane_s16(temp.val[2], rgb.val[1], coeff2, 2);
+            temp_y = vmlaq_lane_s16(temp_y, rgb.val[1], coeff1, 1);
+            c_top.val[0] = vmlaq_lane_s16(c_top.val[0], rgb.val[1], coeff2, 0);
+            c_top.val[1] = vmlaq_lane_s16(c_top.val[1], rgb.val[1], coeff2, 2);
 
-            temp.val[0] = vmlaq_lane_s16(temp.val[0], rgb.val[2], coeff1, 2);
-            temp.val[1] = vmlaq_lane_s16(temp.val[1], rgb.val[2], coeff2, 1);
-            temp.val[2] = vmlaq_lane_s16(temp.val[2], rgb.val[2], coeff2, 3);
+            temp_y = vmlaq_lane_s16(temp_y, rgb.val[2], coeff1, 2);
+            c_top.val[0] = vmlaq_lane_s16(c_top.val[0], rgb.val[2], coeff2, 1);
+            c_top.val[1] = vmlaq_lane_s16(c_top.val[1], rgb.val[2], coeff2, 3);
 
-            temp.val[0] = vshrq_n_s16(temp.val[0], 7);
-            temp.val[1] = vshrq_n_s16(temp.val[1], 7);
-            temp.val[2] = vshrq_n_s16(temp.val[2], 7);
+            temp_y = vshrq_n_s16(temp_y, 7);
+            c_top.val[0] = vshrq_n_s16(c_top.val[0], 7);
+            c_top.val[1] = vshrq_n_s16(c_top.val[1], 7);
 
-            temp.val[0] = vaddq_s16(temp.val[0], val_16);
-            temp.val[1] = vaddq_s16(temp.val[1], val_128);
-            temp.val[2] = vaddq_s16(temp.val[2], val_128);
+            temp_y = vaddq_s16(temp_y, val_16);
+            c_top.val[0] = vaddq_s16(c_top.val[0], val_128);
+            c_top.val[1] = vaddq_s16(c_top.val[1], val_128);
 
-            temp.val[0] = vminq_s16(temp.val[0], val_y_max);
-            temp.val[1] = vminq_s16(temp.val[1], val_c_max);
-            temp.val[2] = vminq_s16(temp.val[2], val_c_max);
+            temp_y = vminq_s16(temp_y, val_y_max);
+            c_top.val[0] = vminq_s16(c_top.val[0], val_c_max);
+            c_top.val[1] = vminq_s16(c_top.val[1], val_c_max);
 
-            temp.val[0] = vmaxq_s16(temp.val[0], val_16);    
-            temp.val[1] = vmaxq_s16(temp.val[1], val_16);
-            temp.val[2] = vmaxq_s16(temp.val[2], val_16);
+            temp_y = vmaxq_s16(temp_y, val_16);    
+            c_top.val[0] = vmaxq_s16(c_top.val[0], val_16);
+            c_top.val[1] = vmaxq_s16(c_top.val[1], val_16);
 
-            y = vreinterpret_u8_s8(vmovn_s16(temp.val[0]));
-            c_top.val[0] = vreinterpret_u8_s8(vmovn_s16(temp.val[1]));
-            c_top.val[1] = vreinterpret_u8_s8(vmovn_s16(temp.val[2]));
             // Store top-row luma values
-            vst1_u8(ycc_data + pixel_top, y);
+            vst1_u8(ycc_data + pixel_top, vreinterpret_u8_s8(vmovn_s16(temp_y)));
 
             // Bottom row RGB->YCC calculation
             buff = vld3_u8(rgb_data + pixel_bottom*3);
@@ -248,49 +244,47 @@ static void convert_and_downsample_pixels(uint8_t* rgb_data, uint32_t rgb_width,
             rgb.val[1] = vreinterpretq_s16_u16(vmovl_u8(buff.val[1]));
             rgb.val[2] = vreinterpretq_s16_u16(vmovl_u8(buff.val[2]));
 
-            temp.val[0] = vmulq_lane_s16(rgb.val[0], coeff1, 0);
-            temp.val[1] = vmulq_lane_s16(rgb.val[0], coeff1, 3);
-            temp.val[2] = vmulq_lane_s16(rgb.val[0], coeff2, 1);
+            temp_y = vmulq_lane_s16(rgb.val[0], coeff1, 0);
+            c_bottom.val[0] = vmulq_lane_s16(rgb.val[0], coeff1, 3);
+            c_bottom.val[1] = vmulq_lane_s16(rgb.val[0], coeff2, 1);
 
-            temp.val[0] = vmlaq_lane_s16(temp.val[0], rgb.val[1], coeff1, 1);
-            temp.val[1] = vmlaq_lane_s16(temp.val[1], rgb.val[1], coeff2, 0);
-            temp.val[2] = vmlaq_lane_s16(temp.val[2], rgb.val[1], coeff2, 2);
+            temp_y = vmlaq_lane_s16(temp_y, rgb.val[1], coeff1, 1);
+            c_bottom.val[0] = vmlaq_lane_s16(c_bottom.val[0], rgb.val[1], coeff2, 0);
+            c_bottom.val[1] = vmlaq_lane_s16(c_bottom.val[1], rgb.val[1], coeff2, 2);
 
-            temp.val[0] = vmlaq_lane_s16(temp.val[0], rgb.val[2], coeff1, 2);
-            temp.val[1] = vmlaq_lane_s16(temp.val[1], rgb.val[2], coeff2, 1);
-            temp.val[2] = vmlaq_lane_s16(temp.val[2], rgb.val[2], coeff2, 3);
+            temp_y = vmlaq_lane_s16(temp_y, rgb.val[2], coeff1, 2);
+            c_bottom.val[0] = vmlaq_lane_s16(c_bottom.val[0], rgb.val[2], coeff2, 1);
+            c_bottom.val[1] = vmlaq_lane_s16(c_bottom.val[1], rgb.val[2], coeff2, 3);
 
-            temp.val[0] = vshrq_n_s16(temp.val[0], 7);
-            temp.val[1] = vshrq_n_s16(temp.val[1], 7);
-            temp.val[2] = vshrq_n_s16(temp.val[2], 7);
+            temp_y = vshrq_n_s16(temp_y, 7);
+            c_bottom.val[0] = vshrq_n_s16(c_bottom.val[0], 7);
+            c_bottom.val[1] = vshrq_n_s16(c_bottom.val[1], 7);
 
-            temp.val[0] = vaddq_s16(temp.val[0], val_16);
-            temp.val[1] = vaddq_s16(temp.val[1], val_128);
-            temp.val[2] = vaddq_s16(temp.val[2], val_128);
+            temp_y = vaddq_s16(temp_y, val_16);
+            c_bottom.val[0] = vaddq_s16(c_bottom.val[0], val_128);
+            c_bottom.val[1] = vaddq_s16(c_bottom.val[1], val_128);
 
-            temp.val[0] = vminq_s16(temp.val[0], val_y_max);
-            temp.val[1] = vminq_s16(temp.val[1], val_c_max);
-            temp.val[2] = vminq_s16(temp.val[2], val_c_max);
+            temp_y = vminq_s16(temp_y, val_y_max);
+            c_bottom.val[0] = vminq_s16(c_bottom.val[0], val_c_max);
+            c_bottom.val[1] = vminq_s16(c_bottom.val[1], val_c_max);
 
-            temp.val[0] = vmaxq_s16(temp.val[0], val_16);    
-            temp.val[1] = vmaxq_s16(temp.val[1], val_16);
-            temp.val[2] = vmaxq_s16(temp.val[2], val_16);
+            temp_y = vmaxq_s16(temp_y, val_16);    
+            c_bottom.val[0] = vmaxq_s16(c_bottom.val[0], val_16);
+            c_bottom.val[1] = vmaxq_s16(c_bottom.val[1], val_16);
 
-            y = vreinterpret_u8_s8(vmovn_s16(temp.val[0]));
-            c_bottom.val[0] = vreinterpret_u8_s8(vmovn_s16(temp.val[1]));
-            c_bottom.val[1] = vreinterpret_u8_s8(vmovn_s16(temp.val[2]));
             // Store bottom-row luma values
-            vst1_u8(ycc_data + pixel_bottom, y);
+            vst1_u8(ycc_data + pixel_bottom, vreinterpret_u8_s8(vmovn_s16(temp_y)));
 
             // Downsample Cb/Cr values
-            c_result.val[0] = vadd_u16(vpaddl_u8(c_top.val[0]), vpaddl_u8(c_bottom.val[0]));
-            c_result.val[1] = vadd_u16(vpaddl_u8(c_top.val[1]), vpaddl_u8(c_bottom.val[1]));
+            c_result.val[0] = vreinterpret_u16_s16(vadd_s16(vpadd_s16(vget_low_s16(c_top.val[0]),vget_high_s16(c_top.val[0])), 
+                vpadd_s16(vget_low_s16(c_bottom.val[0]),vget_high_s16(c_bottom.val[0]))));
+            c_result.val[1] = vreinterpret_u16_s16(vadd_s16(vpadd_s16(vget_low_s16(c_top.val[1]),vget_high_s16(c_top.val[1])), 
+                vpadd_s16(vget_low_s16(c_bottom.val[1]),vget_high_s16(c_bottom.val[1]))));
             c_result.val[0] = vshr_n_u16(c_result.val[0], 2);
             c_result.val[1] = vshr_n_u16(c_result.val[1], 2);
-            buff.val[0] = vmovn_u16(vcombine_u16(c_result.val[0],c_result.val[1]));
             
             // Store downsampled Cb/Cr values
-            vst1_u8(cb_cr_buffer, buff.val[0]);
+            vst1_u8(cb_cr_buffer, vmovn_u16(vcombine_u16(c_result.val[0],c_result.val[1])));
             memcpy(ycc_data + ycc_cb_idx, cb_cr_buffer, 4);
             memcpy(ycc_data + ycc_cr_idx, cb_cr_buffer + 4, 4);
         }
