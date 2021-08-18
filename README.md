@@ -32,6 +32,10 @@ To run:
 
 Performs conversion on test.png
 
+Generates YCbCr data as ycc-result.raw
+
+Use script im-test.sh to convert ycc-result.raw back to RGB image (back-conv.png)
+
 #### Valid options:
 
 * _float_ : Floating-point conversion
