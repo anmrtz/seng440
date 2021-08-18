@@ -30,6 +30,8 @@ Written for Raspberry Pi4. Use provided CMakeLists.txt to compile.
 To run:
 ./cc [option]
 
+Performs conversion on test.png
+
 #### Valid options:
 
 * _float_ : Floating-point conversion
