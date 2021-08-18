@@ -2,7 +2,18 @@
 
 #include "cc.h"
 
-// Simulated 32-bit memory-mapped registers for the 4x4 RGB->YCbCr conversion hardware
+/* 
+ * Simulated 32-bit memory-mapped registers for the 4x4 RGB->YCbCr conversion hardware
+ * These registers correspond to the parallel-I/O registers found in the cc.sv hardware description file:
+ *
+ * cc_rgb_input_reg_0 = hardware_rgb_input_regs[0] // RGB top-left pixel (24 bits used)
+ * cc_rgb_input_reg_1 = hardware_rgb_input_regs[1] // RGB top-right pixel (24 bits used)
+ * cc_rgb_input_reg_2 = hardware_rgb_input_regs[2] // RGB bottom-left pixel (24 bits used)
+ * cc_rgb_input_reg_3 = hardware_rgb_input_regs[3] // RGB bottom-right pixel (24 bits used)
+ * 
+ * cc_ycc_output_reg_1 = hardware_ycc_output_regs[0] // Output luma (Y) values (32 bits total used for four Y values)
+ * cc_ycc_output_reg_1 = hardware_ycc_output_regs[0] // Output chroma (Cb/Cr) values (16 bits total used for Cb + Cr values)
+ */
 static volatile uint32_t hardware_rgb_input_regs[4];  // 4 RGB pixels = 96 bits
 static volatile uint32_t hardware_ycc_output_regs[2]; // 4 Y + 1 Cb + 1 Cr = 48 bits
 
