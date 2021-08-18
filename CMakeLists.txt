@@ -15,6 +15,7 @@ add_executable(${PROJECT_NAME}
     src/cc/cc_naive.c
     src/cc/cc_fixed.c
     src/cc/cc_vector.c
+    src/cc/cc_hardware.c
     )
 
 target_link_libraries(${PROJECT_NAME} lodepng)

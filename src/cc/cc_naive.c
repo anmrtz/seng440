@@ -1,5 +1,3 @@
-#include <stdint.h>
-
 #include "cc.h"
 
 static void __attribute__ ((noinline)) clip(int16_t* val, int16_t max) {

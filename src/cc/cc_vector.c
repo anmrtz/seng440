@@ -190,7 +190,7 @@ static void convert_and_downsample_pixels(uint8_t* rgb_data, uint32_t rgb_width,
     int16x8_t val_y_max = vdupq_n_s16(Y_MAX_VAL);
     int16x8_t val_c_max = vdupq_n_s16(C_MAX_VAL);
 
-    // Downsample converted pixels
+    // Convert and downsample pixels
     for (uint32_t row = 0; row < rgb_height; row += 2) {
         for (uint32_t col = 0; col < rgb_width; col += 8) {
             // Base source pixel

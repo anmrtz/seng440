@@ -22,7 +22,8 @@ enum CC_IMPL {
     NAIVE,
     FIXED,
     VECTOR,
-    VECTOR2
+    VECTOR2,
+    HARDWARE
 };
 
 static const std::map<std::string, CC_IMPL> cc_lookup = {
@@ -30,7 +31,8 @@ static const std::map<std::string, CC_IMPL> cc_lookup = {
     {"naive", NAIVE},
     {"fixed", FIXED},
     {"vector", VECTOR},
-    {"vector2", VECTOR2}
+    {"vector2", VECTOR2},
+    {"hardware", HARDWARE}
 };
 
 void perform_cc(const image& rgb_img, CC_IMPL cc_impl) {
@@ -77,6 +79,12 @@ void perform_cc(const image& rgb_img, CC_IMPL cc_impl) {
             std::cout << "Performing ARM NEON vectorized conversion (combined algorithm)\n";
             t1 = high_resolution_clock::now();
             cc_vector2(rgb_data, rgb_width, rgb_height, planar_ycc_data.data());
+        break;
+        case HARDWARE:
+            // Perform simulated memory-mapped hardware conversion
+            std::cout << "Performing simulated memory-mapped hardware conversion\n";
+            t1 = high_resolution_clock::now();
+            cc_hardware(rgb_data, rgb_width, rgb_height, planar_ycc_data.data());
         break;
     }
     t2 = high_resolution_clock::now();
