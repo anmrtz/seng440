@@ -81,8 +81,8 @@ void perform_cc(const image& rgb_img, CC_IMPL cc_impl) {
             cc_vector2(rgb_data, rgb_width, rgb_height, planar_ycc_data.data());
         break;
         case HARDWARE:
-            // Perform simulated memory-mapped hardware conversion
-            std::cout << "Performing simulated memory-mapped hardware conversion\n";
+            // Perform memory-mapped hardware conversion
+            std::cout << "Performing memory-mapped hardware conversion\n";
             t1 = high_resolution_clock::now();
             cc_hardware(rgb_data, rgb_width, rgb_height, planar_ycc_data.data());
         break;

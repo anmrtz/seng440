@@ -43,4 +43,4 @@ Use script im-test.sh to convert ycc-result.raw back to RGB image (back-conv.png
 * _fixed_ : Optimized fixed-point sequential conversion
 * _vector_ : ARM NEON vectorized conversion
 * _vector2_ : ARM NEON vectorized conversion (combined algorithm)
-* _hardware_ : Memory-mapped hardware conversion (simulated)
+* _hardware_ : Memory-mapped hardware conversion
