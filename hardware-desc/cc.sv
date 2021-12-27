@@ -13,6 +13,28 @@ function ycc_pixel_t rgb_to_ycc(input rgb_pixel_t rgb);
 	rgb_to_ycc.y  = 16 + ((33*rgb.r + 65*rgb.g + 13*rgb.b) >> 7);
 	rgb_to_ycc.cb = 128 + ((-19*rgb.r - 37*rgb.g + 56*rgb.b) >> 7);
 	rgb_to_ycc.cr = 128 + ((56*rgb.r - 47*rgb.g - 9*rgb.b) >> 7);
+
+	// Min-value clip
+	if (rgb_to_ycc.y < 16) begin
+		rgb_to_ycc.y = 16;
+	end
+	if (rgb_to_ycc.cb < 16) begin
+		rgb_to_ycc.cb = 16;
+	end
+	if (rgb_to_ycc.cr < 16) begin
+		rgb_to_ycc.cr = 16;
+	end
+	
+	// Max-value clip
+	if (rgb_to_ycc.y > 235) begin
+		rgb_to_ycc.y = 235;
+	end
+	if (rgb_to_ycc.cb > 240) begin
+		rgb_to_ycc.cb = 240;
+	end
+	if (rgb_to_ycc.cr > 240) begin
+		rgb_to_ycc.cr = 240;
+	end
 endfunction : rgb_to_ycc
 
 // Perform 4x4 block downsampling via averaging
@@ -23,7 +45,7 @@ function ycc_pixel_t avg4(input ycc_pixel_t ycc_pixels[3:0]);
 endfunction : avg4
 
 // Colorspace conversion + downsampling module
-module cc_conv(input clk, 
+module cc(input clk, 
 	input logic [23:0] rgb_up_left, input logic [23:0] rgb_up_right, 
 	input logic [23:0] rgb_down_left, input logic [23:0] rgb_down_right, 
 	output logic [7:0] y_up_left, output logic [7:0] y_up_right, 
@@ -63,19 +85,8 @@ module cc_conv(input clk,
 		y_down_left <= ycc[2].y;
 		y_down_right <= ycc[3].y;
 		
-		cb <= avg_ycc.y[7:0];
-		cr <= avg_ycc.cb[7:0];
+		cb <= avg_ycc.cb[7:0];
+		cr <= avg_ycc.cr[7:0];
 	end
 
-endmodule : cc_conv
-
-// Connect colorspace conversion module to parallel-I/O registers
-module cc(input clk, 	input logic [23:0] cc_rgb_input_reg_0, input logic [23:0] cc_rgb_input_reg_1, 
-	input logic [23:0] cc_rgb_input_reg_2, input logic [23:0] cc_rgb_input_reg_3, 
-	output logic [31:0] cc_ycc_output_reg_0, output logic [15:0] cc_ycc_output_reg_1);
-	
-	cc_conv(clk, cc_rgb_input_reg_0, cc_rgb_input_reg_1, cc_rgb_input_reg_2, cc_rgb_input_reg_3,
-		cc_ycc_output_reg_0[7:0], cc_ycc_output_reg_0[15:8], cc_ycc_output_reg_0[23:16], cc_ycc_output_reg_0[31:24], 
-		cc_ycc_output_reg_1[7:0], cc_ycc_output_reg_1[15:8]);
-		
 endmodule : cc
