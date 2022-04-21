@@ -1,6 +1,6 @@
-# SENG 440 Project - Colorspace Conversion
+# YCC Colorspace Conversion
 
-RGB to YCbCr 4:2:0 colorspace conversion
+Embedded systems course project. Tests various implementations of RGB to YcbCr 4:2:0 colorspace conversion on an ARM-based system.
 
 ## Contents 
 
@@ -25,7 +25,7 @@ src/lodepng/lodepng.h
 
 ## Compilation
 
-Written for Raspberry Pi4. Use provided CMakeLists.txt to compile.
+Written for Raspberry Pi 4. Use provided CMakeLists.txt to compile.
 
 To run:
 ./cc [option]
